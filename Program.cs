@@ -1,7 +1,8 @@
-﻿using ExpenseTracker.Database;
+using ExpenseTracker.Database;
 using ExpenseTracker.Models;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
+using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,7 +27,7 @@ builder.Services.AddSingleton<FinanceContext>(sp =>
     return new FinanceContext(configuration);
 });
 
-// (Optional) If you have a MongoDBService class that depends on FinanceContext
+// Register MongoDbService if used
 builder.Services.AddSingleton<MongoDbService>();
 
 var app = builder.Build();
@@ -65,5 +66,9 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
+
+// ✅ Bind to Render's PORT environment variable
+var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+app.Urls.Add($"http://0.0.0.0:{port}");
 
 app.Run();
