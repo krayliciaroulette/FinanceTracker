@@ -1,0 +1,244 @@
+﻿@model Dictionary<string, List<ExpenseTracker.Models.Budget>>
+@{
+    ViewData["Title"] = "Budgets";
+    Layout = "_FinanceLayout";
+}
+
+<style>
+    .collapse-trigger {
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.2s ease;
+    }
+
+        .collapse-trigger:hover {
+            background: var(--bg-hover) !important;
+        }
+
+    .collapse-icon {
+        transition: transform 0.3s ease;
+        display: inline-block;
+        font-size: 12px;
+    }
+
+        .collapse-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+    .progress {
+        background: var(--bg-primary);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    .progress-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 600;
+        transition: width 0.6s ease;
+    }
+
+    .budget-status-badge {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+
+    .table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+        .table tbody tr:hover {
+            background: var(--bg-hover);
+            transform: translateX(2px);
+        }
+
+    .card-header {
+        position: relative;
+    }
+
+        .card-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card-header:hover::after {
+            opacity: 1;
+        }
+</style>
+
+<div class="fade-in-up">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-6 m-0">Budget Management</h1>
+        <div>
+            <a asp-action="Index" class="btn btn-outline-light btn-sm me-2">Back to Dashboard</a>
+            <a asp-action="AddBudget" class="btn btn-success btn-sm">Add Budget</a>
+        </div>
+    </div>
+
+    @if (Model == null || !Model.Any())
+    {
+        <!-- Empty State -->
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="text-muted mb-3" style="font-size: 3rem; opacity: 0.3;">—</div>
+                <h5 class="text-muted">No budgets found</h5>
+                <p class="text-secondary small">Create your first budget to start tracking your spending</p>
+                <a asp-action="AddBudget" class="btn btn-success mt-3">Add Budget</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        @foreach (var monthGroup in Model.OrderByDescending(m => DateTime.Parse(m.Key + "/01")))
+        {
+            <div class="card mb-3">
+                <div class="card-header collapse-trigger" data-bs-toggle="collapse" data-bs-target="#collapse-@monthGroup.Key.Replace("/", "-")">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="collapse-icon">▼</span>
+                            <span class="fw-semibold">Budget for @monthGroup.Key</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="badge bg-primary">@monthGroup.Value.Count Category(ies)</span>
+                            @{
+                                var totalRemaining = monthGroup.Value.Sum(b => b.RemainingAmount);
+                            }
+                            @if (totalRemaining < 0)
+                            {
+                                <span class="badge bg-danger">Over Budget</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">On Track</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="collapse show" id="collapse-@monthGroup.Key.Replace("/", "-")">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 15%;">Category</th>
+                                        <th style="width: 12%;">Budget</th>
+                                        <th style="width: 12%;">Spent</th>
+                                        <th style="width: 12%;">Remaining</th>
+                                        <th style="width: 30%;">Progress</th>
+                                        <th style="width: 19%;" class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in monthGroup.Value)
+                                    {
+                                        // Calculate REMAINING percentage (100% = full budget available, 0% = exhausted)
+                                        var remainingPercentage = item.BudgetAmount > 0
+                                        ? ((item.BudgetAmount - item.SpentAmount) / item.BudgetAmount) * 100
+                                        : 0;
+
+                                        // Ensure it stays within 0-100 range
+                                        remainingPercentage = Math.Max(0, Math.Min(100, remainingPercentage));
+
+                                        // Color based on remaining percentage
+                                        var progressColor = remainingPercentage <= 10 ? "danger" :
+                                        remainingPercentage <= 25 ? "warning" : "success";
+
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-primary">@item.CategoryName</span>
+                                            </td>
+                                            <td>
+                                                <strong class="text-primary">₱@item.BudgetAmount.ToString("N2")</strong>
+                                            </td>
+                                            <td>
+                                                <span class="text-danger fw-semibold">₱@item.SpentAmount.ToString("N2")</span>
+                                            </td>
+                                            <td>
+                                                <span class="@(item.RemainingAmount < 0 ? "text-danger fw-bold" : "text-success fw-semibold")">
+                                                    ₱@item.RemainingAmount.ToString("N2")
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="progress flex-grow-1" style="height: 24px;">
+                                                        <div class="progress-bar bg-@progressColor" role="progressbar"
+                                                             style="width: @remainingPercentage.ToString("F0")%"
+                                                             aria-valuenow="@remainingPercentage" aria-valuemin="0" aria-valuemax="100">
+                                                        </div>
+                                                    </div>
+                                                    @if (item.RemainingAmount < 0)
+                                                    {
+                                                        <span class="budget-status-badge bg-danger text-white">Over Budget</span>
+                                                    }
+                                                    else if (remainingPercentage <= 25)
+                                                    {
+                                                        <span class="budget-status-badge bg-warning text-dark">Low</span>
+                                                    }
+                                                    else if (remainingPercentage >= 75)
+                                                    {
+                                                        <span class="budget-status-badge bg-success text-white">Good</span>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td class="text-end">
+                                                <a asp-action="EditBudget" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Edit</a>
+                                                <a asp-action="DeleteBudget" asp-route-id="@item.Id"
+                                                   class="btn btn-sm btn-danger"
+                                                   onclick="return confirm('Delete this budget? This will remove the budget but keep your expenses.')">Delete</a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-active">
+                                    <tr>
+                                        <td><strong>Total</strong></td>
+                                        <td><strong class="text-primary">₱@monthGroup.Value.Sum(b => b.BudgetAmount).ToString("N2")</strong></td>
+                                        <td><strong class="text-danger">₱@monthGroup.Value.Sum(b => b.SpentAmount).ToString("N2")</strong></td>
+                                        <td>
+                                            <strong class="@(monthGroup.Value.Sum(b => b.RemainingAmount) < 0 ? "text-danger" : "text-success")">
+                                                ₱@monthGroup.Value.Sum(b => b.RemainingAmount).ToString("N2")
+                                            </strong>
+                                        </td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.collapse-trigger').forEach(trigger => {
+            const targetId = trigger.getAttribute('data-bs-target');
+            const icon = trigger.querySelector('.collapse-icon');
+            const collapseElement = document.querySelector(targetId);
+
+            trigger.addEventListener('click', function() {
+                icon.classList.toggle('collapsed');
+            });
+
+            // Set initial state based on collapse element
+            if (collapseElement && !collapseElement.classList.contains('show')) {
+                icon.classList.add('collapsed');
+            }
+        });
+    </script>
+}

@@ -1,0 +1,247 @@
+﻿@model ExpenseTracker.Models.User
+
+@{
+    ViewData["Title"] = "Create Account";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f6fa;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            font-family: "Segoe UI", sans-serif;
+            overflow-y: auto;
+            padding-top: 50px;
+        }
+
+        .register-container {
+            width: 400px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 30px;
+            margin-bottom: 50px;
+        }
+
+        h3 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+        }
+
+            .btn-primary:hover {
+                background-color: #0056b3;
+            }
+
+        .login-link {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .phone-input-group {
+            display: flex;
+            align-items: center;
+        }
+
+        .phone-prefix {
+            background-color: #e9ecef;
+            border: 1px solid #ced4da;
+            border-right: none;
+            border-radius: 0.375rem 0 0 0.375rem;
+            padding: 0.375rem 0.75rem;
+            font-weight: 500;
+        }
+
+        .phone-input-group input {
+            border-radius: 0 0.375rem 0.375rem 0;
+            border-left: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <h3>🧾 Create Account</h3>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert alert-danger">@ViewBag.Error</div>
+        }
+
+        <form asp-action="Register" method="post">
+            <!-- First Name -->
+            <div class="mb-3">
+                <label class="form-label">First Name</label>
+                <input asp-for="FirstName" class="form-control" placeholder="Juan" required />
+            </div>
+
+            <!-- Last Name -->
+            <div class="mb-3">
+                <label class="form-label">Last Name</label>
+                <input asp-for="LastName" class="form-control" placeholder="Dela Cruz" required />
+            </div>
+
+            <!-- Middle Name (Full) -->
+            <div class="mb-3">
+                <label class="form-label">Middle Name <small class="text-muted">(Optional)</small></label>
+                <input asp-for="MiddleName" class="form-control" placeholder="Santos" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Username</label>
+                <input asp-for="Username" class="form-control" required />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input asp-for="PrimaryEmail" type="email" class="form-control" required />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Phone Number</label>
+                <div class="phone-input-group">
+                    <span class="phone-prefix">+63</span>
+                    <input asp-for="PrimaryPhoneNumber" type="tel" class="form-control"
+                           id="phoneInput" placeholder="918 412 2721" maxlength="12" required />
+                </div>
+            </div>
+
+            <!-- Street Address -->
+            <div class="mb-3">
+                <label class="form-label">Street Address</label>
+                <input asp-for="AddressStreet" class="form-control" placeholder="e.g., 123 Katipunan Ave" required />
+            </div>
+
+            <!-- Province (First) -->
+            <div class="mb-3">
+                <label class="form-label">Province</label>
+                <select asp-for="AddressProvince" id="provinceSelect" class="form-select" required>
+                    <option value="">Select Province</option>
+                    <option value="Metro Manila">Metro Manila</option>
+                    <option value="Cavite">Cavite</option>
+                    <option value="Laguna">Laguna</option>
+                    <option value="Rizal">Rizal</option>
+                    <option value="Bulacan">Bulacan</option>
+                    <option value="Pampanga">Pampanga</option>
+                    <option value="Batangas">Batangas</option>
+                    <option value="Cebu">Cebu</option>
+                    <option value="Davao del Sur">Davao del Sur</option>
+                </select>
+            </div>
+
+            <!-- City (Depends on Province) -->
+            <div class="mb-3">
+                <label class="form-label">City</label>
+                <select asp-for="AddressCity" id="citySelect" class="form-select" required disabled>
+                    <option value="">Select Province First</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Postal Code</label>
+                <input asp-for="AddressPostalCode" class="form-control" placeholder="e.g., 1109" required />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input asp-for="Password" type="password" class="form-control" required />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Confirm Password</label>
+                <input asp-for="ConfirmPassword" type="password" class="form-control" required />
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Create Account</button>
+
+            <div class="login-link">
+                Already have an account? <a asp-action="Login">Login here</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Phone number formatting
+        const phoneInput = document.getElementById('phoneInput');
+
+        phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+
+            if (value.length > 10) {
+                value = value.substring(0, 10); // Limit to 10 digits
+            }
+
+            // Format: 918 412 2721
+            let formatted = '';
+            if (value.length > 0) {
+                formatted = value.substring(0, 3);
+            }
+            if (value.length > 3) {
+                formatted += ' ' + value.substring(3, 6);
+            }
+            if (value.length > 6) {
+                formatted += ' ' + value.substring(6, 10);
+            }
+
+            e.target.value = formatted;
+        });
+
+        // City-Province mapping
+        const cityData = {
+            'Metro Manila': ['Caloocan', 'Las Piñas', 'Makati', 'Malabon', 'Mandaluyong', 'Manila', 'Marikina', 'Muntinlupa', 'Navotas', 'Parañaque', 'Pasay', 'Pasig', 'Quezon City', 'San Juan', 'Taguig', 'Valenzuela'],
+            'Cavite': ['Bacoor', 'Cavite City', 'Dasmariñas', 'Imus', 'Tagaytay', 'Trece Martires'],
+            'Laguna': ['Biñan', 'Calamba', 'San Pablo', 'San Pedro', 'Santa Rosa'],
+            'Rizal': ['Antipolo', 'Cainta', 'Rodriguez', 'Taytay'],
+            'Bulacan': ['Malolos', 'Meycauayan', 'San Jose del Monte'],
+            'Pampanga': ['Angeles', 'Mabalacat', 'San Fernando'],
+            'Batangas': ['Batangas City', 'Lipa', 'Tanauan'],
+            'Cebu': ['Cebu City', 'Lapu-Lapu', 'Mandaue', 'Talisay'],
+            'Davao del Sur': ['Davao City', 'Digos']
+        };
+
+        const provinceSelect = document.getElementById('provinceSelect');
+        const citySelect = document.getElementById('citySelect');
+
+        provinceSelect.addEventListener('change', function() {
+            const selectedProvince = this.value;
+
+            // Clear city dropdown
+            citySelect.innerHTML = '<option value="">Select City</option>';
+
+            if (selectedProvince && cityData[selectedProvince]) {
+                citySelect.disabled = false;
+
+                // Add cities for selected province
+                cityData[selectedProvince].forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city;
+                    option.textContent = city;
+                    citySelect.appendChild(option);
+                });
+            } else {
+                citySelect.disabled = true;
+                citySelect.innerHTML = '<option value="">Select Province First</option>';
+            }
+        });
+
+        // Form submission - combine phone number with +63
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const phoneValue = phoneInput.value.replace(/\s/g, ''); // Remove spaces
+            phoneInput.value = '+63' + phoneValue; // Add prefix before submission
+        });
+    </script>
+</body>

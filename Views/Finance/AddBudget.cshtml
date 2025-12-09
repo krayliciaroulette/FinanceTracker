@@ -1,0 +1,59 @@
+﻿@model ExpenseTracker.Models.Budget
+@{
+    ViewData["Title"] = "Add Budget";
+    Layout = "_FinanceLayout";
+}
+
+<div class="fade-in-up">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <div style="font-size: 4rem;">💰</div>
+                        <h2 class="text-gradient mt-3">Add Budget</h2>
+                        <p class="text-muted">@DateTime.UtcNow.AddHours(8).ToString("MMMM yyyy")</p>
+                    </div>
+
+                    @if (TempData["WarningMessage"] != null)
+                    {
+                        <div class="alert alert-warning">
+                            @TempData["WarningMessage"]
+                        </div>
+                    }
+
+                    <form asp-action="AddBudget" method="post">
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Category *</label>
+                            <select asp-for="CategoryId" id="categorySelect" class="form-select form-select-lg" required>
+                                <option value="">-- Select Category --</option>
+                                @foreach (var category in ViewBag.Categories as List<ExpenseTracker.Models.Category>)
+                                {
+                                    <option value="@category.CategoryId">@category.CategoryName</option>
+                                }
+                            </select>
+                            <small class="text-muted">💡 If budget exists, the amount will be added to it</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="BudgetAmount" class="form-label fw-semibold">Budget Amount (₱) *</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text">₱</span>
+                                <input asp-for="BudgetAmount" type="number" step="0.01" class="form-control" placeholder="0.00" required />
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <span>💾</span> Save Budget
+                            </button>
+                            <a asp-action="Budgets" class="btn btn-outline-light">
+                                <span>←</span> Back to Budgets
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,61 @@
+﻿@model ExpenseTracker.Models.Expense
+@{
+    ViewData["Title"] = "Edit Expense";
+    Layout = "_FinanceLayout";
+}
+
+<div class="fade-in-up">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body p-4">
+                    <h2 class="text-center text-gradient mb-4">
+                        <span style="font-size: 2.5rem;">✏️</span><br />
+                        Edit Expense
+                    </h2>
+
+                    <form asp-action="EditExpense" method="post">
+                        <input type="hidden" asp-for="Id" />
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="Amount" class="form-label fw-semibold">Amount (₱) *</label>
+                                <input asp-for="Amount" type="number" step="0.01" class="form-control form-control-lg" required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Category *</label>
+                                <select asp-for="CategoryId" id="CategorySelect" class="form-select form-select-lg" required>
+                                    @foreach (var category in ViewBag.Categories as List<ExpenseTracker.Models.Category>)
+                                    {
+                                        <option value="@category.CategoryId" selected="@(Model.CategoryId == category.CategoryId)">@category.CategoryName</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Subcategory <small class="text-muted">(Optional)</small></label>
+                                <input type="text" name="customCategoryName" value="@Model.CustomCategoryName" class="form-control" placeholder="e.g., Grocery, Electricity, Gas" />
+                                <small class="text-muted">Leave blank to use main category name</small>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="Description" class="form-label fw-semibold">Description</label>
+                                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                            </div>
+
+                            <div class="col-12 mt-4">
+                                <button type="submit" class="btn btn-success btn-lg w-100 mb-2">
+                                    <span>💾</span> Save Changes
+                                </button>
+                                <a asp-action="Expenses" class="btn btn-outline-light w-100">
+                                    <span>←</span> Back to Expenses
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

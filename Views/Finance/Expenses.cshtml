@@ -1,0 +1,336 @@
+﻿@using System.Runtime.InteropServices
+@model IEnumerable<ExpenseTracker.Models.Expense>
+
+@{
+    ViewData["Title"] = "Expenses";
+    Layout = "_FinanceLayout";
+    var today = DateTime.UtcNow.AddHours(8).ToString("yyyy-MM-dd");
+}
+
+<style>
+    .tab-navigation {
+        display: flex;
+        gap: 4px;
+        padding: 0 1rem;
+        background: var(--bg-primary);
+        border-bottom: 1px solid var(--border);
+        margin: -2rem -2rem 2rem -2rem;
+        overflow-x: auto;
+    }
+
+    .tab-item {
+        padding: 0.75rem 1.5rem;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        font-size: 14px;
+        white-space: nowrap;
+        position: relative;
+        margin-top: 0.5rem;
+    }
+
+        .tab-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .tab-item.active {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--primary);
+            margin-top: 0;
+            padding-top: 0.85rem;
+        }
+
+    .tab-content {
+        display: none;
+    }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<div class="fade-in-up">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-6 m-0">Expense Management</h1>
+        <a asp-action="Index" class="btn btn-outline-light btn-sm">Back to Dashboard</a>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+        <div class="tab-item active" data-tab="add-expense">Add New Expense</div>
+        <div class="tab-item" data-tab="filter">Filter & Search</div>
+        <div class="tab-item" data-tab="export">Export Data</div>
+    </div>
+
+    <!-- Tab: Add New Expense -->
+    <div class="tab-content active" id="add-expense">
+        <div class="card mb-3">
+            <div class="card-body">
+                <form asp-action="CreateExpense" method="post">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Amount (₱)</label>
+                            <input name="Amount" type="number" step="0.01" class="form-control" placeholder="0.00" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Category</label>
+                            <select name="CategoryId" class="form-select" id="categorySelect" required>
+                                <option value="">Select Category</option>
+                                @foreach (var category in ViewBag.Categories as List<ExpenseTracker.Models.Category>)
+                                {
+                                    <option value="@category.CategoryId">@category.CategoryName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Subcategory <small class="text-muted">(Optional)</small></label>
+                            <input name="customCategoryName" type="text" class="form-control" placeholder="e.g., Grocery, Electricity" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Description <small class="text-muted">(Optional)</small></label>
+                            <input name="Description" type="text" class="form-control" placeholder="Details..." />
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-success">Add Expense</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- All Expenses List for Add Tab -->
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>All Expenses</span>
+                    <span class="text-muted">@Model.Count() items</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                @if (Model == null || !Model.Any())
+                {
+                    <div class="text-center py-5">
+                        <div class="text-muted mb-3" style="font-size: 3rem; opacity: 0.3;">—</div>
+                        <h5 class="text-muted">No expenses found</h5>
+                        <p class="text-secondary small">Add your first expense above</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 12%;">Amount</th>
+                                    <th style="width: 18%;">Category</th>
+                                    <th style="width: 30%;">Description</th>
+                                    <th style="width: 18%;">Date & Time</th>
+                                    <th style="width: 22%;" class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var e in Model)
+                                {
+                                    <tr>
+                                        <td><strong>₱@e.Amount.ToString("N2")</strong></td>
+                                        <td><span class="badge bg-primary">@e.DisplayCategoryName</span></td>
+                                        <td>@e.Description</td>
+                                        <td>
+                                            @{
+                                                var phTimeZoneId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                                                ? "Singapore Standard Time"
+                                                : "Asia/Manila";
+                                                var phTimeZone = TimeZoneInfo.FindSystemTimeZoneById(phTimeZoneId);
+                                                var phDate = TimeZoneInfo.ConvertTime(e.ExpenseDate, phTimeZone);
+                                            }
+                                            <div>@phDate.ToString("MMM dd, yyyy")</div>
+                                            <small class="text-muted">@phDate.ToString("hh:mm tt")</small>
+                                        </td>
+                                        <td class="text-end">
+                                            <a asp-action="EditExpense" asp-route-id="@e.Id" class="btn btn-sm btn-warning">Edit</a>
+                                            <a asp-action="DeleteExpense" asp-route-id="@e.Id" class="btn btn-sm btn-danger" onclick="return confirm('Delete this expense?')">Delete</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Filter & Search -->
+    <div class="tab-content" id="filter">
+        <div class="card mb-3">
+            <div class="card-body">
+                <form asp-action="Expenses" method="get">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" name="startDate" class="form-control" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">End Date</label>
+                            <input type="date" name="endDate" class="form-control" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Category</label>
+                            <select name="categoryId" class="form-select">
+                                <option value="">All Categories</option>
+                                @foreach (var category in ViewBag.Categories as List<ExpenseTracker.Models.Category>)
+                                {
+                                    <option value="@category.CategoryId">@category.CategoryName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Min Amount</label>
+                            <input type="number" step="0.01" name="minAmount" class="form-control" placeholder="0.00" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Max Amount</label>
+                            <input type="number" step="0.01" name="maxAmount" class="form-control" placeholder="0.00" />
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-primary">Apply Filter</button>
+                            <a asp-action="Expenses" class="btn btn-outline-light">Reset</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- All Expenses List for Filter Tab -->
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>All Expenses</span>
+                    <span class="text-muted">@Model.Count() items</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                @if (Model == null || !Model.Any())
+                {
+                    <div class="text-center py-5">
+                        <div class="text-muted mb-3" style="font-size: 3rem; opacity: 0.3;">—</div>
+                        <h5 class="text-muted">No expenses found</h5>
+                        <p class="text-secondary small">Add your first expense above</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 12%;">Amount</th>
+                                    <th style="width: 18%;">Category</th>
+                                    <th style="width: 30%;">Description</th>
+                                    <th style="width: 18%;">Date & Time</th>
+                                    <th style="width: 22%;" class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var e in Model)
+                                {
+                                    <tr>
+                                        <td><strong>₱@e.Amount.ToString("N2")</strong></td>
+                                        <td><span class="badge bg-primary">@e.DisplayCategoryName</span></td>
+                                        <td>@e.Description</td>
+                                        <td>
+                                            @{
+                                                var phTimeZoneId2 = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                                                ? "Singapore Standard Time"
+                                                : "Asia/Manila";
+                                                var phTimeZone2 = TimeZoneInfo.FindSystemTimeZoneById(phTimeZoneId2);
+                                                var phDate2 = TimeZoneInfo.ConvertTime(e.ExpenseDate, phTimeZone2);
+                                            }
+                                            <div>@phDate2.ToString("MMM dd, yyyy")</div>
+                                            <small class="text-muted">@phDate2.ToString("hh:mm tt")</small>
+                                        </td>
+                                        <td class="text-end">
+                                            <a asp-action="EditExpense" asp-route-id="@e.Id" class="btn btn-sm btn-warning">Edit</a>
+                                            <a asp-action="DeleteExpense" asp-route-id="@e.Id" class="btn btn-sm btn-danger" onclick="return confirm('Delete this expense?')">Delete</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Export Data -->
+    <div class="tab-content" id="export">
+        <div class="card mb-3">
+            <div class="card-body">
+                <form asp-action="Export" method="get">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" name="startDate" class="form-control" value="@today" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">End Date</label>
+                            <input type="date" name="endDate" class="form-control" value="@today" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Format</label>
+                            <select name="format" class="form-select" required>
+                                <option value="pdf">PDF (.pdf)</option>
+                                <option value="excel">Excel (.xlsx)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-info w-100">Download</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Tab switching functionality
+        document.querySelectorAll('.tab-item').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Remove active class from all tabs and contents
+                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+                // Add active class to clicked tab
+                this.classList.add('active');
+
+                // Show corresponding content
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+    </script>
+}

@@ -1,0 +1,49 @@
+﻿@model IEnumerable<dynamic>
+@{
+    ViewData["Title"] = "Budget Status Tracker";
+    Layout = "_FinanceLayout";
+}
+
+<div class="container mt-4">
+    <h2 class="text-center mb-4">💰 Budget Status & Alerts</h2>
+
+    <div class="card shadow-sm p-3">
+        <table class="table table-bordered table-hover text-center align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Budget Period</th>
+                    <th>Budget Amount (₱)</th>
+                    <th>Total Spent (₱)</th>
+                    <th>Remaining (₱)</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        string rowClass = item.Status.Contains("Over") ? "table-danger" :
+                        item.Status.Contains("Near") ? "table-warning" : "table-success";
+
+                        <tr class="@rowClass">
+                            <td>@item.Period</td>
+                            <td>₱@item.BudgetAmount.ToString("N2")</td>
+                            <td>₱@item.TotalSpent.ToString("N2")</td>
+                            <td>₱@item.Remaining.ToString("N2")</td>
+                            <td><strong>@item.Status</strong></td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="5" class="text-muted">No budget data available.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="text-center mt-4">
+        <a asp-action="Dashboard" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+</div>
