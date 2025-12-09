@@ -3,314 +3,415 @@
     Layout = "_FinanceLayout";
 }
 
-<div class="fade-in-up">
+<div class="space-y-8 animate-in fade-in zoom-in duration-500">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="display-6 m-0">Dashboard Overview</h1>
-        <div class="text-muted">@ViewBag.CurrentMonth</div>
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-white tracking-tight">Dashboard Overview</h1>
+            <p class="text-slate-400 mt-1">Financial snapshot for <span class="text-blue-400 font-medium">@ViewBag.CurrentMonth</span></p>
+        </div>
+        <!-- Date Badge -->
+        <div class="hidden md:flex bg-slate-800/50 backdrop-blur border border-slate-700/50 px-4 py-2 rounded-full text-slate-300 text-sm font-medium items-center gap-2 shadow-sm">
+            <span class="material-icons-outlined text-blue-500" style="font-size: 16px;">calendar_today</span>
+            @DateTime.Now.ToString("MMMM dd, yyyy")
+        </div>
     </div>
 
     <!-- Summary Cards -->
-    <div class="row g-4 mb-5">
-        <div class="col-md-4">
-            <div class="card h-100" style="background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);">
-                <div class="card-body text-center p-4">
-                    <h6 class="text-white-50 mb-2">Total Budget</h6>
-                    <h2 class="fw-bold text-white mb-0">₱@String.Format("{0:N2}", ViewBag.TotalBudgets)</h2>
-                    <small class="text-white-50">This Month</small>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Total Budget -->
+        <div class="group relative bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-blue-500/30 transition-all duration-300 shadow-lg hover:shadow-blue-900/10">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h3 class="text-slate-400 text-sm font-medium uppercase tracking-wider">Total Budget</h3>
+                    <div class="mt-2 flex items-baseline gap-1">
+                        <span class="text-3xl font-bold text-white tracking-tight">₱@String.Format("{0:N2}", ViewBag.TotalBudgets)</span>
+                    </div>
+                </div>
+                <div class="p-3 bg-blue-500/5 rounded-xl border border-blue-500/10 group-hover:bg-blue-500/10 transition-colors">
+                    <span class="material-icons-outlined text-blue-500">account_balance_wallet</span>
                 </div>
             </div>
+            <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                <div class="bg-blue-500 h-1.5 rounded-full" style="width: 100%"></div>
+            </div>
+            <p class="text-xs text-slate-500 mt-3 font-medium">Allocated for @ViewBag.CurrentMonth</p>
         </div>
-        <div class="col-md-4">
-            <div class="card h-100" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">
-                <div class="card-body text-center p-4">
-                    <h6 class="text-white-50 mb-2">Total Spent</h6>
-                    <h2 class="fw-bold text-white mb-0">₱@String.Format("{0:N2}", ViewBag.TotalMonthlyExpenses)</h2>
-                    <small class="text-white-50">This Month</small>
+
+        <!-- Total Spent -->
+        <div class="group relative bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-red-500/30 transition-all duration-300 shadow-lg hover:shadow-red-900/10">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                     <h3 class="text-slate-400 text-sm font-medium uppercase tracking-wider">Total Spent</h3>
+                    <div class="mt-2 flex items-baseline gap-1">
+                        <span class="text-3xl font-bold text-white tracking-tight">₱@String.Format("{0:N2}", ViewBag.TotalMonthlyExpenses)</span>
+                    </div>
+                </div>
+                <div class="p-3 bg-red-500/5 rounded-xl border border-red-500/10 group-hover:bg-red-500/10 transition-colors">
+                    <span class="material-icons-outlined text-red-500">trending_down</span>
                 </div>
             </div>
+             <!-- Progress bar calculation for visual flair -->
+            @{
+                double percentage = 0;
+                if (ViewBag.TotalBudgets > 0)
+                {
+                    percentage = (double)ViewBag.TotalMonthlyExpenses / (double)ViewBag.TotalBudgets * 100;
+                    if (percentage > 100) percentage = 100;
+                }
+            }
+            <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                <div class="bg-red-500 h-1.5 rounded-full" style="width: @percentage%"></div>
+            </div>
+            <p class="text-xs text-slate-500 mt-3 font-medium">@percentage.ToString("0")% of budget used</p>
         </div>
-        <div class="col-md-4">
-            <div class="card h-100" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
-                <div class="card-body text-center p-4">
-                    <h6 class="text-white-50 mb-2">Remaining</h6>
-                    <h2 class="fw-bold text-white mb-0">₱@String.Format("{0:N2}", ViewBag.Remaining)</h2>
-                    <small class="text-white-50">Available Budget</small>
+
+        <!-- Remaining -->
+        <div class="group relative bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-emerald-500/30 transition-all duration-300 shadow-lg hover:shadow-emerald-900/10">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h3 class="text-slate-400 text-sm font-medium uppercase tracking-wider">Remaining</h3>
+                    <div class="mt-2 flex items-baseline gap-1">
+                         <span class="text-3xl font-bold text-white tracking-tight">₱@String.Format("{0:N2}", ViewBag.Remaining)</span>
+                    </div>
+                </div>
+                <div class="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 group-hover:bg-emerald-500/10 transition-colors">
+                    <span class="material-icons-outlined text-emerald-500">savings</span>
                 </div>
             </div>
+            @{
+                double remainingPercentage = 0;
+                if (ViewBag.TotalBudgets > 0)
+                {
+                    remainingPercentage = (double)ViewBag.Remaining / (double)ViewBag.TotalBudgets * 100;
+                    if (remainingPercentage > 100) remainingPercentage = 100;
+                    if (remainingPercentage < 0) remainingPercentage = 0;
+                }
+            }
+            <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                <div class="bg-emerald-500 h-1.5 rounded-full" style="width: @remainingPercentage%"></div>
+            </div>
+            <p class="text-xs text-slate-500 mt-3 font-medium">Available to spend</p>
         </div>
     </div>
 
     <!-- Charts Section -->
-    <div class="row g-4 mb-5">
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-header">
-                    <span>Budget Usage by Category</span>
-                </div>
-                <div class="card-body">
-                    <div style="height: 320px; position: relative;">
-                        <canvas id="budgetBarGraph"></canvas>
-                    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Budget Bar Chart (Horizontal) -->
+        <div class="bg-slate-900 rounded-2xl border border-slate-800 shadow-lg flex flex-col">
+            <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="font-semibold text-white flex items-center gap-2">
+                    <span class="material-icons-outlined text-blue-500 text-sm">bar_chart</span>
+                    Budget Usage
+                </h3>
+            </div>
+            <div class="p-6 flex-1 min-h-[400px] relative">
+                <div class="w-full h-full relative">
+                    <canvas id="budgetChart"></canvas>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-header">
-                    <span>Daily Expense Breakdown</span>
-                </div>
-                <div class="card-body">
-                    <div style="height: 320px; position: relative;">
-                        <canvas id="expensePieGraph"></canvas>
-                    </div>
+
+        <!-- Expense Breakdown Pie Chart -->
+        <div class="bg-slate-900 rounded-2xl border border-slate-800 shadow-lg flex flex-col">
+            <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="font-semibold text-white flex items-center gap-2">
+                    <span class="material-icons-outlined text-purple-500 text-sm">pie_chart</span>
+                    Daily Breakdown
+                </h3>
+            </div>
+            <div class="p-6 flex-1 min-h-[400px] relative">
+                <div class="w-full h-full relative">
+                     <canvas id="expenseChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Today's Expenses Section -->
-    <div class="card">
-        <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <span>Today's Expenses</span>
-                @if (ViewBag.TodayExpenses != null && ((List<ExpenseTracker.Models.Expense>)ViewBag.TodayExpenses).Any())
-                {
-                    <span class="text-muted">@(((List<ExpenseTracker.Models.Expense>)ViewBag.TodayExpenses).Count) items</span>
-                }
-            </div>
-        </div>
-        <div class="card-body p-0">
-            @if (ViewBag.TodayExpenses == null || !((List<ExpenseTracker.Models.Expense>)ViewBag.TodayExpenses).Any())
+    <div class="bg-slate-900 rounded-2xl border border-slate-800 shadow-lg overflow-hidden">
+        <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+            <h3 class="font-semibold text-white flex items-center gap-2">
+                <span class="material-icons-outlined text-slate-400">history</span>
+                Today's Transactions
+            </h3>
+             @if (ViewBag.TodayExpenses != null && ((List<ExpenseTracker.Models.Expense>)ViewBag.TodayExpenses).Any())
             {
-                <div class="text-center py-5">
-                    <div class="text-muted mb-3" style="font-size: 3rem; opacity: 0.3;">—</div>
-                    <h5 class="text-muted">No expenses today</h5>
-                    <p class="text-secondary small">You haven't recorded any expenses yet today</p>
+                 <span class="bg-slate-800 text-slate-300 text-xs px-2 py-1 rounded-md border border-slate-700">
+                     @(((List<ExpenseTracker.Models.Expense>)ViewBag.TodayExpenses).Count) items
+                 </span>
+            }
+        </div>
+        
+        <div class="overflow-x-auto">
+             @if (ViewBag.TodayExpenses == null || !((List<ExpenseTracker.Models.Expense>)ViewBag.TodayExpenses).Any())
+            {
+                 <div class="flex flex-col items-center justify-center py-12 text-center">
+                    <div class="bg-slate-800 p-4 rounded-full mb-4">
+                        <span class="material-icons-outlined text-slate-600" style="font-size: 32px;">receipt</span>
+                    </div>
+                    <h5 class="text-white font-medium mb-1">No expenses today</h5>
+                    <p class="text-slate-500 text-sm">You haven't recorded any transactions yet.</p>
                 </div>
             }
             else
             {
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th style="width: 20%;">Category</th>
-                                <th style="width: 15%;" class="text-end">Amount</th>
-                                <th style="width: 45%;">Description</th>
-                                <th style="width: 20%;">Time</th>
+                <table class="w-full text-left text-sm text-slate-400">
+                    <thead class="bg-slate-800/50 text-xs uppercase font-medium text-slate-500">
+                        <tr>
+                            <th class="px-6 py-4 tracking-wider w-1/4">Category</th>
+                            <th class="px-6 py-4 tracking-wider w-1/4">Description</th>
+                            <th class="px-6 py-4 tracking-wider text-right w-1/4">Amount</th>
+                            <th class="px-6 py-4 tracking-wider text-right w-1/4">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800">
+                         @foreach (var item in (List<ExpenseTracker.Models.Expense>)ViewBag.TodayExpenses)
+                        {
+                            <tr class="hover:bg-slate-800/50 transition-colors">
+                                <td class="px-6 py-4">
+                                     <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                        @item.DisplayCategoryName
+                                     </span>
+                                </td>
+                                <!-- Description Moved Here -->
+                                <td class="px-6 py-4 text-white">
+                                    @if (string.IsNullOrWhiteSpace(item.Description))
+                                    {
+                                        <span class="text-slate-600 italic">No description</span>
+                                    }
+                                    else
+                                    {
+                                        @item.Description
+                                    }
+                                </td>
+                                <!-- Amount Moved Here -->
+                                <td class="px-6 py-4 text-right">
+                                    <span class="font-bold text-white">₱@item.Amount.ToString("N2")</span>
+                                </td>
+                                
+                                <td class="px-6 py-4 text-right">
+                                    @{
+                                        var phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
+                                        var phDate = TimeZoneInfo.ConvertTime(item.ExpenseDate, phTimeZone);
+                                    }
+                                    <span class="text-slate-500">@phDate.ToString("hh:mm tt")</span>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in (List<ExpenseTracker.Models.Expense>)ViewBag.TodayExpenses)
-                            {
-                                <tr>
-                                    <td>
-                                        <span class="badge bg-primary">@item.DisplayCategoryName</span>
-                                    </td>
-                                    <td class="text-end">
-                                        <strong class="text-danger">₱@item.Amount.ToString("N2")</strong>
-                                    </td>
-                                    <td>@item.Description</td>
-                                    <td>
-                                        @{
-                                            var phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
-                                            var phDate = TimeZoneInfo.ConvertTime(item.ExpenseDate, phTimeZone);
-                                        }
-                                        <small class="text-muted">@phDate.ToString("hh:mm tt")</small>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                        <tfoot class="table-active">
-                            <tr>
-                                <td colspan="1"><strong class="text-white">Total Expenses For Today</strong></td>
-                                <td class="text-end"><strong class="text-white">₱@ViewBag.TotalExpenses.ToString("N2")</strong></td>
-                                <td colspan="2"></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
+                        }
+                    </tbody>
+                    <tfoot class="bg-slate-800/30 border-t border-slate-800">
+                        <tr>
+                            <td colspan="2" class="px-6 py-4 font-bold text-white">Total</td>
+                            <td class="px-6 py-4 text-right font-bold text-white text-lg">₱@ViewBag.TotalExpenses.ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
             }
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script>
-    // Budget Bar Graph with Over Budget Badges
+    // --- Global Chart.js Defaults ---
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.05)';
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.font.size = 12;
+
+    // --- Budget Chart (Horizontal Stacked Bar) ---
+    const budgetCtx = document.getElementById('budgetChart').getContext('2d');
     const budgetData = @Html.Raw(ViewBag.BudgetChartData ?? "[]");
 
-    const budgetCtx = document.getElementById('budgetBarGraph').getContext('2d');
-
-    // ✅ Calculate over-budget amounts
-    const overBudgetAmounts = budgetData.map(b => {
-        const total = b.Spent + b.Remaining;
-        return b.Spent > total ? b.Spent - total : 0;
-    });
+    const budgetLabels = budgetData.map(b => b.CategoryName);
+    const spentData = budgetData.map(b => b.Spent);
+    const remainingData = budgetData.map(b => Math.max(b.Remaining, 0));
 
     new Chart(budgetCtx, {
         type: 'bar',
         data: {
-            labels: budgetData.map(b => b.CategoryName),
+            labels: budgetLabels,
             datasets: [
                 {
                     label: 'Remaining',
-                    data: budgetData.map(b => Math.max(b.Remaining, 0)),
-                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                    borderRadius: 6
+                    data: remainingData,
+                    backgroundColor: '#10b981', // Emerald
+                    barThickness: 20,
+                    borderRadius: 4, // Round all corners
                 },
                 {
                     label: 'Spent',
-                    data: budgetData.map(b => {
-                        const total = b.Spent + b.Remaining;
-                        return Math.min(b.Spent, total);
-                    }),
-                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                    borderRadius: 6
+                    data: spentData,
+                    backgroundColor: '#ef4444', // Red
+                    barThickness: 20,
+                    borderRadius: 4,
                 }
             ]
         },
         options: {
+            indexAxis: 'y', // Horizontal
             responsive: true,
             maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        boxWidth: 8,
+                        color: '#94a3b8',
+                        font: { weight: 500 }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    titleColor: '#fff',
+                    bodyColor: '#cbd5e1',
+                    padding: 10,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.x !== null) {
+                                label += '₱' + context.parsed.x.toLocaleString();
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
             scales: {
                 x: {
                     stacked: true,
-                    ticks: { color: '#ffffff' },
-                    grid: { display: false }
+                    grid: { display: false }, // Cleaner look
+                    ticks: {
+                        callback: function(value) { return '₱' + value.toLocaleString(); }
+                    }
                 },
                 y: {
                     stacked: true,
-                    beginAtZero: true,
+                    grid: { display: false },
                     ticks: {
-                        color: '#ffffff',
-                        callback: value => '₱' + value.toLocaleString()
-                    },
-                    grid: { color: 'rgba(255,255,255,0.05)' }
+                        color: '#fff',
+                        font: { weight: 500 }
+                    }
                 }
             },
-            plugins: {
-                legend: {
-                    labels: { color: '#ffffff', font: { size: 12 } }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    callbacks: {
-                        label: ctx => ctx.dataset.label + ': ₱' + ctx.raw.toLocaleString(),
-                        afterLabel: (ctx) => {
-                            if (ctx.datasetIndex === 1 && overBudgetAmounts[ctx.dataIndex] > 0) {
-                                return '⚠️ Over by: ₱' + overBudgetAmounts[ctx.dataIndex].toLocaleString();
-                            }
-                            return '';
-                        }
-                    }
-                },
-                datalabels: {
-                    display: false
-                }
+            animation: {
+                duration: 2000,
+                easing: 'easeOutQuart'
             }
-        },
-        plugins: [{
-            afterDatasetsDraw: (chart) => {
-                const ctx = chart.ctx;
-                chart.data.labels.forEach((label, index) => {
-                    const overAmount = overBudgetAmounts[index];
-                    if (overAmount > 0) {
-                        const meta = chart.getDatasetMeta(1);
-                        const bar = meta.data[index];
-
-                        // ✅ Draw over-budget badge
-                        const x = bar.x;
-                        const y = bar.y - 25;
-
-                        ctx.save();
-                        ctx.fillStyle = '#ef4444';
-                        ctx.strokeStyle = '#991b1b';
-                        ctx.lineWidth = 2;
-
-                        // Badge background
-                        const badgeWidth = 90;
-                        const badgeHeight = 20;
-                        const badgeX = x - badgeWidth / 2;
-                        const badgeY = y - badgeHeight / 2;
-
-                        ctx.beginPath();
-                        ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
-                        ctx.fill();
-                        ctx.stroke();
-
-                        // Badge text
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 11px sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText('⚠️ +₱' + overAmount.toLocaleString(), x, y);
-                        ctx.restore();
-                    }
-                });
-            }
-        }]
+        }
     });
 
-    // Expense Pie Chart
+    // --- Expense Chart (Donut) ---
+    const expenseCtx = document.getElementById('expenseChart').getContext('2d');
     const pieData = @Html.Raw(ViewBag.PieChartData ?? "[]");
-
+    
+    // Process Data
     const categoryIdToColor = {
-        '1': '#60a5fa',
-        '2': '#ef4444',
-        '3': '#fbbf24',
-        '4': '#a78bfa'
+        '1': '#3b82f6', // Blue (Food)
+        '2': '#ef4444', // Red (Transport)
+        '3': '#f59e0b', // Amber (Utilities)
+        '4': '#8b5cf6'  // Purple (Entertainment)
     };
-    const unplannedColor = '#6b7280';
+    const unplannedColor = '#64748b'; // Slate 500
 
-    const allLabels = pieData.map(e => e.Category + (e.IsPlanned ? '' : ' (Unplanned)'));
-    const allData = pieData.map(e => e.Total);
-
-    const allColors = pieData.map((e) => {
-        if (!e.IsPlanned) {
-            return unplannedColor;
-        }
+    const donutLabels = pieData.map(e => e.Category + (e.IsPlanned ? '' : ' (Unplanned)'));
+    const donutValues = pieData.map(e => e.Total);
+    const donutColors = pieData.map((e) => {
+        if (!e.IsPlanned) return unplannedColor;
         return categoryIdToColor[e.CategoryId] || categoryIdToColor['4'];
     });
 
-    const pieCtx = document.getElementById('expensePieGraph').getContext('2d');
-    new Chart(pieCtx, {
-        type: 'pie',
+    new Chart(expenseCtx, {
+        type: 'doughnut',
         data: {
-            labels: allLabels,
+            labels: donutLabels,
             datasets: [{
-                data: allData,
-                backgroundColor: allColors,
-                borderWidth: 2,
-                borderColor: '#1e293b'
+                data: donutValues,
+                backgroundColor: donutColors,
+                borderWidth: 0, // No border for cleaner look
+                hoverOffset: 4
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: '75%', // Thin ring
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        color: '#ffffff',
-                        font: { size: 11 },
-                        padding: 12
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        boxWidth: 8,
+                        padding: 20,
+                        color: '#94a3b8'
                     }
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    titleColor: '#ffffff',
-                    bodyColor: '#ffffff',
+                    backgroundColor: '#1e293b',
+                    titleColor: '#fff',
+                    bodyColor: '#cbd5e1',
+                    padding: 10,
+                    cornerRadius: 8,
                     callbacks: {
-                        label: ctx => ctx.label + ': ₱' + ctx.raw.toLocaleString()
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                label += '₱' + context.parsed.toLocaleString();
+                            }
+                            return label;
+                        }
                     }
-                },
-                datalabels: {
-                    display: false
                 }
+            },
+            animation: {
+                duration: 2000,
+                easing: 'easeOutQuart'
             }
-        }
+        },
+        plugins: [{
+            id: 'textCenter',
+            beforeDraw: function(chart) {
+                if (chart.config.type !== 'doughnut') return;
+                var width = chart.width,
+                    height = chart.height,
+                    ctx = chart.ctx;
+
+                ctx.restore();
+                var fontSize = (height / 150).toFixed(2); // Reduced size
+                ctx.font = "bold " + fontSize + "em Inter";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "#ffffff";
+
+                var total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                var text = "₱" + total.toLocaleString();
+                var textX = Math.round((width - ctx.measureText(text).width) / 2);
+                var textY = (height / 2) - 10; // Move up slightly to center the text pair
+
+                ctx.fillText(text, textX, textY);
+                
+                // Add "Total" label below
+                ctx.font = "500 " + (height / 260).toFixed(2) + "em Inter"; // Reduced size
+                ctx.fillStyle = "#94a3b8";
+                var label = "Total Spent";
+                var labelX = Math.round((width - ctx.measureText(label).width) / 2);
+                ctx.fillText(label, labelX, textY + 25);
+                
+                ctx.save();
+            }
+        }]
     });
 </script>

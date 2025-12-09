@@ -1,87 +1,117 @@
 ﻿@{
     ViewData["Title"] = "Expense Tracking";
     Layout = "_FinanceLayout";
+    
+    decimal totalSpent = ViewBag.TotalSpent ?? 0;
+    decimal dailyAverage = ViewBag.DailyAverage ?? 0;
+    decimal highestDayAmount = ViewBag.HighestDayAmount ?? 0;
+    int highestDay = ViewBag.HighestDay ?? 0;
+    int year = ViewBag.Year;
+    int month = ViewBag.Month;
+    string monthName = ViewBag.MonthName;
 }
 
-<style>
-    .tracking-header {
-        text-align: center;
-        margin: 2rem 0;
-    }
-
-    .tracking-title {
-        font-size: 1.75rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
-
-    .tracking-subtitle {
-        font-size: 1.1rem;
-        color: var(--text-secondary);
-        margin-bottom: 1.5rem;
-    }
-
-    .month-navigation {
-        display: flex;
-        justify-content: center;
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
-
-    .chart-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
-        padding: 1.5rem;
-        box-shadow: var(--shadow-md);
-        height: 550px;
-    }
-
-    .chart-title {
-        text-align: center;
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 1.5rem;
-        color: var(--text-primary);
-    }
-
-    .chart-container {
-        position: relative;
-        height: calc(100% - 3rem);
-    }
-</style>
-
-<div class="fade-in-up">
+<div class="space-y-6 animate-fade-in-up">
     <!-- Header -->
-    <div class="tracking-header">
-        <h1 class="tracking-title">
-            <span>📊</span>
-            <span>Expense Tracking by Day</span>
-        </h1>
-        <h5 class="tracking-subtitle">Monthly Summary: @ViewBag.MonthName</h5>
-
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-white tracking-tight">
+                Expense Tracking
+            </h1>
+            <p class="text-slate-400 mt-1">Visualize your daily spending habits and trends</p>
+        </div>
+        
         <!-- Month Navigation -->
-        <div class="month-navigation">
-            <a href="@Url.Action("ExpenseTracking", "Finance", new { year = ViewBag.Year, month = (int)ViewBag.Month - 1 })"
-               class="btn btn-outline-light">
-                ⬅ Previous Month
+        <div class="flex items-center gap-2 bg-slate-800/50 rounded-xl p-1 border border-slate-700/50">
+            <a href="@Url.Action("ExpenseTracking", "Finance", new { year = year, month = month - 1 })" 
+               class="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-all"
+               title="Previous Month">
+                <span class="material-icons-outlined text-xl">chevron_left</span>
             </a>
-            <a href="@Url.Action("ExpenseTracking", "Finance", new { year = ViewBag.Year, month = (int)ViewBag.Month + 1 })"
-               class="btn btn-outline-light">
-                Next Month ➡
+            <span class="px-4 font-medium text-white min-w-[140px] text-center">@monthName</span>
+            <a href="@Url.Action("ExpenseTracking", "Finance", new { year = year, month = month + 1 })" 
+               class="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-all"
+               title="Next Month">
+                <span class="material-icons-outlined text-xl">chevron_right</span>
             </a>
         </div>
     </div>
 
-    <!-- Chart Card -->
-    <div class="chart-card">
-        <h5 class="chart-title">📊 Expense Breakdown</h5>
-        <div class="chart-container">
-            <canvas id="expenseChart"></canvas>
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Total Spent -->
+        <div class="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-5 shadow-lg relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl -mr-8 -mt-8 group-hover:bg-rose-500/20 transition-all duration-500"></div>
+            <div class="flex items-center gap-3 mb-2">
+                <div class="p-2 rounded-lg bg-rose-500/10 text-rose-400">
+                    <span class="material-icons-outlined text-xl">payments</span>
+                </div>
+                <h3 class="text-sm font-medium text-slate-400 uppercase tracking-wide">Total Spent</h3>
+            </div>
+            <p class="text-2xl font-bold text-white tracking-tight">₱@totalSpent.ToString("N2")</p>
+            <p class="text-xs text-slate-500 mt-1">For @monthName</p>
+        </div>
+
+        <!-- Daily Average -->
+        <div class="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-5 shadow-lg relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -mr-8 -mt-8 group-hover:bg-blue-500/20 transition-all duration-500"></div>
+            <div class="flex items-center gap-3 mb-2">
+                <div class="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                    <span class="material-icons-outlined text-xl">analytics</span>
+                </div>
+                <h3 class="text-sm font-medium text-slate-400 uppercase tracking-wide">Daily Average</h3>
+            </div>
+            <p class="text-2xl font-bold text-white tracking-tight">₱@dailyAverage.ToString("N2")</p>
+            <p class="text-xs text-slate-500 mt-1">Per day in @monthName</p>
+        </div>
+
+        <!-- Highest Spending Day -->
+        <div class="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-5 shadow-lg relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl -mr-8 -mt-8 group-hover:bg-amber-500/20 transition-all duration-500"></div>
+             <div class="flex items-center gap-3 mb-2">
+                <div class="p-2 rounded-lg bg-amber-500/10 text-amber-400">
+                    <span class="material-icons-outlined text-xl">trending_up</span>
+                </div>
+                <h3 class="text-sm font-medium text-slate-400 uppercase tracking-wide">Peak Spending</h3>
+            </div>
+            <div class="flex items-end gap-2">
+                <p class="text-2xl font-bold text-white tracking-tight">₱@highestDayAmount.ToString("N2")</p>
+                <span class="text-xs text-amber-400/80 font-medium mb-1.5 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                    Day @highestDay
+                </span>
+            </div>
+             <p class="text-xs text-slate-500 mt-1">Highest daily total</p>
+        </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Category Breakdown (Donut) -->
+        <div class="lg:col-span-1 bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-6 shadow-xl relative flex flex-col">
+            <h3 class="text-lg font-semibold text-white flex items-center gap-2 mb-6">
+                <span class="material-icons-outlined text-indigo-400">pie_chart</span>
+                Category Share
+            </h3>
+            <div class="relative flex-grow min-h-[300px] flex items-center justify-center">
+                 <canvas id="categoryChart"></canvas>
+            </div>
+            <div class="mt-4 text-center">
+                <p class="text-sm text-slate-400">Total spending distribution</p>
+            </div>
+        </div>
+
+        <!-- Daily Trend (Bar) -->
+        <div class="lg:col-span-2 bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-6 shadow-xl relative">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <span class="material-icons-outlined text-indigo-400">bar_chart</span>
+                    Daily Breakdown
+                </h3>
+            </div>
+            
+            <div class="relative h-[400px] w-full">
+                <canvas id="expenseChart"></canvas>
+            </div>
         </div>
     </div>
 </div>
@@ -90,220 +120,138 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         const groupedData = @Html.Raw(ViewBag.GroupedData ?? "[]");
-        const categoryMainColors = @Html.Raw(ViewBag.CategoryColors ?? "{}");
+        const ctxBar = document.getElementById('expenseChart').getContext('2d');
+        const ctxDonut = document.getElementById('categoryChart').getContext('2d');
 
-        const ctx = document.getElementById('expenseChart').getContext('2d');
-
-        // Build a map of subcategory -> main category (based on CategoryId)
-        const subcategoryToMainCategory = {};
-        const subcategoryToCategoryId = {};
-        const categoryIdToName = {
-            "1": "Food",
-            "2": "Bills",
-            "3": "Transportation",
-            "4": "Others"
+        // PREDEFINED Main Categories and Colors
+        const mainCategories = {
+            "1": { name: "Food", color: "#f87171", bg: "rgba(248, 113, 113, 0.9)" },
+            "2": { name: "Bills", color: "#fbbf24", bg: "rgba(251, 191, 36, 0.9)" },
+            "3": { name: "Transportation", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.9)" },
+            "4": { name: "Others", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.9)" }
         };
 
-        // First pass: map each subcategory to its main category and planned status
-        groupedData.forEach(day => {
-            day.Categories.forEach(cat => {
-                const mainCat = categoryIdToName[cat.CategoryId] || "Others";
-                subcategoryToMainCategory[cat.Category] = {
-                    mainCategory: mainCat,
-                    isPlanned: cat.IsPlanned,
-                    categoryId: cat.CategoryId
-                };
-                subcategoryToCategoryId[cat.Category] = cat.CategoryId;
-            });
-        });
-
-        // Get all unique subcategories
-        const allSubcategories = [...new Set(groupedData.flatMap(d => d.Categories.map(c => c.Category)))];
-
-        // Group by CategoryId and planned status
-        const groupedByCategoryAndStatus = {};
-
-        allSubcategories.forEach(subcat => {
-            const info = subcategoryToMainCategory[subcat];
-            const categoryId = info?.categoryId || "4";
-            const isPlanned = info?.isPlanned || false;
-            const key = `${categoryId}_${isPlanned ? 'planned' : 'unplanned'}`;
-
-            if (!groupedByCategoryAndStatus[key]) {
-                groupedByCategoryAndStatus[key] = [];
-            }
-            groupedByCategoryAndStatus[key].push(subcat);
-        });
-
-        // Sort groups: planned categories first, then unplanned
-        const sortedGroups = Object.keys(groupedByCategoryAndStatus).sort((a, b) => {
-            const aIsPlanned = a.endsWith('planned');
-            const bIsPlanned = b.endsWith('planned');
-
-            if (aIsPlanned && !bIsPlanned) return -1;
-            if (!aIsPlanned && bIsPlanned) return 1;
-            return 0;
-        });
-
-        // Flatten into sorted subcategories
-        const sortedSubcategories = [];
-        sortedGroups.forEach(groupKey => {
-            sortedSubcategories.push(...groupedByCategoryAndStatus[groupKey]);
-        });
-
-        // Function to generate color variations
-        function generateColorVariations(baseColor, count) {
-            const colors = [baseColor];
-            if (count <= 1) return colors;
-
-            for (let i = 1; i < count; i++) {
-                const factor = 1 + (i * 0.2);
-                colors.push(adjustColor(baseColor, factor));
-            }
-            return colors;
-        }
-
-        function adjustColor(color, factor) {
-            const r = Math.min(255, Math.floor(parseInt(color.slice(1, 3), 16) * factor));
-            const g = Math.min(255, Math.floor(parseInt(color.slice(3, 5), 16) * factor));
-            const b = Math.min(255, Math.floor(parseInt(color.slice(5, 7), 16) * factor));
-            return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-        }
-
-        // Assign colors based on main category and planned status
-        const subcategoryColors = {};
-        const categoryGroups = {}; // Groups planned subcategories by main category
-        const unplannedColor = '#6b7280'; // Gray for unplanned
-
-        sortedSubcategories.forEach(subcat => {
-            const info = subcategoryToMainCategory[subcat];
-
-            if (!info || !info.isPlanned) {
-                // Unplanned = gray
-                subcategoryColors[subcat] = unplannedColor;
-            } else {
-                // Planned = group by main category for color variations
-                const mainCat = info.mainCategory;
-                if (!categoryGroups[mainCat]) {
-                    categoryGroups[mainCat] = [];
-                }
-                categoryGroups[mainCat].push(subcat);
-            }
-        });
-
-        // Generate color variations for each main category group
-        Object.entries(categoryGroups).forEach(([mainCat, subcats]) => {
-            const baseColor = categoryMainColors[mainCat] || '#90a4ae';
-            const colors = generateColorVariations(baseColor, subcats.length);
-
-            subcats.forEach((subcat, idx) => {
-                subcategoryColors[subcat] = colors[idx];
-            });
-        });
-
-        // Create datasets - group by CategoryId for stacking
-        const datasets = sortedSubcategories.map(subcat => {
-            const info = subcategoryToMainCategory[subcat];
-            const isPlanned = info && info.isPlanned;
-            const categoryId = info?.categoryId || "4";
-            const stackId = `category_${categoryId}_${isPlanned ? 'planned' : 'unplanned'}`;
-
+        // --- 1. Prepare Data for Bar Chart ---
+        const labels = groupedData.map(d => `Day ${d.Day}`);
+        const barDatasets = Object.keys(mainCategories).map(catId => {
+            const catInfo = mainCategories[catId];
             return {
-                label: subcat + (isPlanned ? '' : ' (Unplanned)'),
-                data: groupedData.map(d => {
-                    const found = d.Categories.find(c => c.Category === subcat);
-                    return found ? found.Total : 0;
+                label: catInfo.name,
+                data: groupedData.map(day => {
+                    return day.Categories
+                        .filter(c => (c.CategoryId.toString() === catId) || (!mainCategories[c.CategoryId] && catId === "4"))
+                        .reduce((sum, c) => sum + c.Total, 0);
                 }),
-                backgroundColor: subcategoryColors[subcat] || unplannedColor,
-                borderWidth: 1,
-                borderColor: '#1e293b',
-                barPercentage: 0.95,
-                categoryPercentage: 0.8,
-                barThickness: 'flex',
-                maxBarThickness: 60,
-                stack: stackId
+                backgroundColor: catInfo.bg,
+                borderColor: catInfo.color,
+                borderWidth: 0,
+                borderRadius: 4,
+                borderSkipped: false,
+                stack: 'mainStack'
             };
         });
 
-        new Chart(ctx, {
+        // --- 2. Prepare Data for Donut Chart ---
+        const categoryTotals = {};
+        Object.keys(mainCategories).forEach(k => categoryTotals[k] = 0);
+        
+        groupedData.forEach(day => {
+            day.Categories.forEach(cat => {
+                 const catId = (mainCategories[cat.CategoryId]) ? cat.CategoryId.toString() : "4";
+                 categoryTotals[catId] += cat.Total;
+            });
+        });
+
+        const donutData = Object.keys(mainCategories).map(k => categoryTotals[k]);
+        const donutColors = Object.values(mainCategories).map(v => v.bg);
+        const donutLabels = Object.values(mainCategories).map(v => v.name);
+
+        // --- 3. Render Bar Chart ---
+        new Chart(ctxBar, {
             type: "bar",
-            data: {
-                labels: groupedData.map(d => `Day ${d.Day}`),
-                datasets: datasets
-            },
+            data: { labels: labels, datasets: barDatasets },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: {
-                    mode: "index",
-                    intersect: false
-                },
+                layout: { padding: { top: 20 } },
+                interaction: { mode: "index", intersect: false },
                 scales: {
                     x: {
                         stacked: true,
-                        ticks: {
-                            color: "#94a3b8",
-                            font: { size: 12, weight: '500' }
-                        },
-                        grid: {
-                            color: "#334155",
-                            drawBorder: false
-                        }
+                        ticks: { color: "#94a3b8", font: { family: "'Inter', sans-serif", size: 12 }, padding: 10 },
+                        grid: { display: false }
                     },
                     y: {
                         stacked: true,
                         beginAtZero: true,
-                        ticks: {
-                            color: "#94a3b8",
-                            font: { size: 12, weight: '500' },
-                            callback: value => "₱" + value.toLocaleString()
-                        },
-                        grid: {
-                            color: "#334155",
-                            drawBorder: false
-                        }
+                        ticks: { color: "#94a3b8", font: { family: "'Inter', sans-serif", size: 12 }, callback: v => "₱" + v.toLocaleString(), padding: 10 },
+                        grid: { color: "rgba(51, 65, 85, 0.3)", drawBorder: false, borderDash: [4, 4] }
                     }
                 },
                 plugins: {
-                    legend: {
-                        display: true,
-                        position: 'bottom',
-                        labels: {
-                            color: '#f1f5f9',
-                            font: { size: 12, weight: '500' },
-                            padding: 12,
-                            boxWidth: 14,
-                            boxHeight: 14,
-                            usePointStyle: false
+                    legend: { display: true, position: 'top', align: 'end', labels: { color: '#e2e8f0', usePointStyle: true, boxWidth: 8 } },
+                    tooltip: {
+                         backgroundColor: "rgba(15, 23, 42, 0.95)",
+                        titleColor: "#f8fafc",
+                        bodyColor: "#e2e8f0",
+                        titleFont: { weight: "600", size: 13, family: "'Inter', sans-serif" },
+                        padding: 16,
+                        cornerRadius: 12,
+                        callbacks: {
+                            afterBody: function(tooltipItems) {
+                                const dataIndex = tooltipItems[0].dataIndex;
+                                const dayData = groupedData[dataIndex];
+                                const topExpenses = dayData.Categories.sort((a,b) => b.Total - a.Total).slice(0, 5);
+                                if (!topExpenses.length) return [];
+                                let lines = ['\nTop Expenses:'];
+                                topExpenses.forEach(exp => lines.push(`• ${exp.Category}: ₱${exp.Total.toLocaleString()}`));
+                                return lines;
+                            },
+                             label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed.y !== null) { label += "₱" + context.parsed.y.toLocaleString(); }
+                                return label;
+                            }
                         }
+                    }
+                }
+            }
+        });
+
+        // --- 4. Render Donut Chart ---
+        new Chart(ctxDonut, {
+            type: "doughnut",
+            data: {
+                labels: donutLabels,
+                datasets: [{
+                    data: donutData,
+                    backgroundColor: donutColors,
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#e2e8f0', font: { family: "'Inter', sans-serif", size: 12 }, usePointStyle: true, boxWidth: 8, padding: 20 }
                     },
                     tooltip: {
-                        backgroundColor: "rgba(15, 23, 42, 0.95)",
-                        titleColor: "#f1f5f9",
-                        bodyColor: "#f1f5f9",
-                        titleFont: { weight: "bold", size: 14 },
-                        bodyFont: { size: 13 },
-                        padding: 12,
-                        borderColor: "#334155",
-                        borderWidth: 1,
-                        displayColors: true,
+                         backgroundColor: "rgba(15, 23, 42, 0.95)",
+                        titleColor: "#f8fafc",
+                        bodyColor: "#e2e8f0",
+                        padding: 16,
+                        cornerRadius: 12,
                         callbacks: {
                             label: function(context) {
-                                const dayData = groupedData[context.dataIndex];
-                                const subcatName = context.dataset.label.replace(' (Unplanned)', '');
-                                const catData = dayData.Categories.find(c => c.Category === subcatName);
-
-                                if (catData) {
-                                    const plannedTag = catData.IsPlanned ? '' : ' (Unplanned)';
-                                    let label = `${catData.Category}${plannedTag}: ₱${catData.Total.toLocaleString()}`;
-
-                                    if (catData.Description) {
-                                        label += ` – ${catData.Description}`;
-                                    }
-
-                                    return label;
-                                }
-                                return '';
+                                const value = context.raw;
+                                const total = context.chart._metasets[context.datasetIndex].total;
+                                const percentage = ((value / total) * 100).toFixed(1) + "%";
+                                return ` ${context.label}: ₱${value.toLocaleString()} (${percentage})`;
                             }
                         }
                     }

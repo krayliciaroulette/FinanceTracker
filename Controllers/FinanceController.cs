@@ -154,28 +154,7 @@ namespace ExpenseTracker.Controllers
             return View(expenses);
         }
 
-        [HttpGet]
-        public IActionResult CreateExpense()
-        {
-            var userId = HttpContext.Session.GetString("UserId");
-            if (string.IsNullOrEmpty(userId))
-                return RedirectToAction("Login", "Account");
 
-            var today = DateTime.UtcNow.AddHours(8).Date;
-
-            var todaysExpenses = _context.Expenses
-                .Find(e => e.UserId == userId && e.ExpenseDate >= today && e.ExpenseDate < today.AddDays(1))
-                .ToList();
-
-            var categories = _context.Categories.Find(_ => true).ToList();
-            ViewBag.Categories = categories;
-
-            ViewBag.Today = today.ToString("MMMM dd, yyyy");
-            ViewBag.TodaysExpenses = todaysExpenses;
-            ViewBag.TotalToday = todaysExpenses.Sum(e => e.Amount);
-
-            return View(new Expense());
-        }
         [HttpPost]
         public IActionResult CreateExpense(Expense expense, string? customCategoryName)
         {
@@ -314,6 +293,8 @@ namespace ExpenseTracker.Controllers
             return RedirectToAction("Expenses");
         }
 
+
+
         [HttpPost]
         public IActionResult EditExpense(Expense expense, string? customCategoryName)
         {
@@ -369,6 +350,7 @@ namespace ExpenseTracker.Controllers
 
             var budgets = _context.Budgets.Find(b => b.UserId == userId).ToList();
             var categories = _context.Categories.Find(_ => true).ToList();
+            ViewBag.Categories = categories;
 
             // ✅ Get all expenses to calculate spent amounts
             var allExpenses = _context.Expenses.Find(e => e.UserId == userId).ToList();
@@ -393,25 +375,7 @@ namespace ExpenseTracker.Controllers
             return View(groupedBudgets);
         }
 
-        [HttpGet]
-        public IActionResult AddBudget()
-        {
-            var userId = HttpContext.Session.GetString("UserId");
-            if (string.IsNullOrEmpty(userId))
-                return RedirectToAction("Login", "Account");
 
-            var now = DateTime.UtcNow.AddHours(8);
-            var model = new Budget
-            {
-                Month = now.Month,
-                Year = now.Year
-            };
-
-            var categories = _context.Categories.Find(_ => true).ToList();
-            ViewBag.Categories = categories;
-
-            return View(model);
-        }
 
         [HttpPost]
         public IActionResult AddBudget(Budget budget)
@@ -548,18 +512,7 @@ namespace ExpenseTracker.Controllers
             return RedirectToAction("Budgets");
         }
 
-        public IActionResult EditBudget(string id)
-        {
-            var userId = HttpContext.Session.GetString("UserId");
-            var budget = _context.Budgets.Find(b => b.Id == id && b.UserId == userId).FirstOrDefault();
-            if (budget == null)
-                return NotFound();
 
-            var categories = _context.Categories.Find(_ => true).ToList();
-            ViewBag.Categories = categories;
-
-            return View("EditBudget", budget);
-        }
 
         [HttpPost]
         public IActionResult EditBudget(Budget budget)
@@ -654,6 +607,24 @@ namespace ExpenseTracker.Controllers
                 })
                 .OrderBy(x => x.Day)
                 .ToList();
+
+            // Calculate Summary Stats
+            decimal totalSpent = expenses.Sum(e => e.Amount);
+            int daysInMonth = DateTime.DaysInMonth(selectedYear, selectedMonth);
+            int daysPassed = (selectedYear == currentDate.Year && selectedMonth == currentDate.Month) 
+                             ? currentDate.Day 
+                             : daysInMonth;
+            
+            decimal dailyAverage = daysPassed > 0 ? totalSpent / daysPassed : 0;
+
+            var highestDayGroup = groupedData.OrderByDescending(d => d.Total).FirstOrDefault();
+            decimal highestDayAmount = highestDayGroup != null ? highestDayGroup.Total : 0;
+            int highestDay = highestDayGroup?.Day ?? 0;
+
+            ViewBag.TotalSpent = totalSpent;
+            ViewBag.DailyAverage = dailyAverage;
+            ViewBag.HighestDayAmount = highestDayAmount;
+            ViewBag.HighestDay = highestDay;
 
             var monthName = new DateTime(selectedYear, selectedMonth, 1).ToString("MMMM yyyy");
 
@@ -751,19 +722,6 @@ namespace ExpenseTracker.Controllers
             );
             var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTimeZone);
 
-            // Determine which month to show summary for
-            int summaryMonth, summaryYear;
-            if (startDate.HasValue)
-            {
-                summaryMonth = startDate.Value.Month;
-                summaryYear = startDate.Value.Year;
-            }
-            else
-            {
-                summaryMonth = now.Month;
-                summaryYear = now.Year;
-            }
-
             // Set default date range if not provided
             if (!startDate.HasValue || !endDate.HasValue)
             {
@@ -774,256 +732,243 @@ namespace ExpenseTracker.Controllers
             // Extend endDate to include entire day
             var endDateInclusive = endDate.Value.Date.AddDays(1).AddSeconds(-1);
 
-            // Get expenses for the EXPORT date range (what shows in table)
-            var expensesForTable = _context.Expenses
+            // ✅ LOGIC FIX: Get Expenses for the ENTIRE Date Range
+            var expensesForRange = _context.Expenses
                 .Find(e => e.UserId == userId && e.ExpenseDate >= startDate && e.ExpenseDate <= endDateInclusive)
                 .ToList();
 
-            // Get ALL expenses for the SUMMARY MONTH (for the top cards)
-            var allMonthExpenses = _context.Expenses
-                .Find(e => e.UserId == userId &&
-                          e.ExpenseDate.Month == summaryMonth &&
-                          e.ExpenseDate.Year == summaryYear)
-                .ToList();
+            // ✅ LOGIC FIX: Get Budgets for ALL months within the Date Range
+            // Construct a list of Month/Year pairs that are covered by the range
+            var relevantBudgets = new List<Budget>();
+            var cursorDate = startDate.Value;
+            while (cursorDate <= endDateInclusive)
+            {
+                var monthBudgets = _context.Budgets.Find(b =>
+                    b.UserId == userId &&
+                    b.Month == cursorDate.Month &&
+                    b.Year == cursorDate.Year
+                ).ToList();
+                relevantBudgets.AddRange(monthBudgets);
+                cursorDate = cursorDate.AddMonths(1);
+            }
 
             var categories = _context.Categories.Find(_ => true).ToList();
 
-            // Process both sets of expenses
-            foreach (var expense in expensesForTable.Concat(allMonthExpenses).Distinct())
+            // Enhance expenses with category names
+            foreach (var expense in expensesForRange)
             {
                 expense.CategoryName = categories.FirstOrDefault(c => c.CategoryId == expense.CategoryId)?.CategoryName ?? "Unknown";
             }
 
-            // Get budgets for the SUMMARY MONTH
-            var budgets = _context.Budgets.Find(b =>
-                b.UserId == userId &&
-                b.Month == summaryMonth &&
-                b.Year == summaryYear
-            ).ToList();
-
-            foreach (var budget in budgets)
+            // Enhance budgets with category names
+            foreach (var budget in relevantBudgets)
             {
                 budget.CategoryName = categories.FirstOrDefault(c => c.CategoryId == budget.CategoryId)?.CategoryName ?? "Unknown";
             }
 
-            // Calculate summary based on ENTIRE MONTH
-            decimal totalBudget = budgets.Sum(b => b.BudgetAmount);
-            decimal totalExpenses = allMonthExpenses.Sum(e => e.Amount);
-            decimal remaining = totalBudget - totalExpenses;
+            // ✅ CALCULATE SUMMARIES FOR THE ENTIRE PERIOD
+            decimal totalBudget = relevantBudgets.Sum(b => b.BudgetAmount);
+            decimal totalExpenses = expensesForRange.Sum(e => e.Amount);
+            decimal remaining = totalBudget - totalExpenses; // Overall Remaining
 
-            // Calculate ACTUAL over budget amount: expenses that exceed their category budget
+            // Calculate ACTUAL Over Budget (Sum of overages per category per month OR aggregate? Let's do aggregate per category for the period)
+            // Actually, for multi-month, simply summing (Total Expense > Total Budget) is safer and clearer for "Period Summary".
+            // But to be precise, we should sum the overages.
+            // Let's stick to the period aggregate: If (Total Expense for Cat X) > (Total Budget for Cat X), add diff.
+
+            var categoryBudgetSums = relevantBudgets
+                .GroupBy(b => b.CategoryId)
+                .ToDictionary(g => g.Key, g => g.Sum(b => b.BudgetAmount));
+
+            var categoryExpenseSums = expensesForRange
+                .GroupBy(e => e.CategoryId)
+                .ToDictionary(g => g.Key, g => g.Sum(e => e.Amount));
+
             decimal overBudget = 0;
-            foreach (var budget in budgets)
+            // Add overages for budgeted categories
+            foreach (var catId in categoryBudgetSums.Keys)
             {
-                var categoryExpenses = allMonthExpenses
-                    .Where(e => e.CategoryId == budget.CategoryId)
-                    .Sum(e => e.Amount);
-
-                if (categoryExpenses > budget.BudgetAmount)
+                decimal bTotal = categoryBudgetSums[catId];
+                decimal eTotal = categoryExpenseSums.ContainsKey(catId) ? categoryExpenseSums[catId] : 0;
+                if (eTotal > bTotal)
                 {
-                    overBudget += (categoryExpenses - budget.BudgetAmount);
+                    overBudget += (eTotal - bTotal);
+                }
+            }
+            // Add expenses for categories with NO budget at all in this period
+            foreach (var catId in categoryExpenseSums.Keys)
+            {
+                if (!categoryBudgetSums.ContainsKey(catId))
+                {
+                    overBudget += categoryExpenseSums[catId];
                 }
             }
 
-            // Also add expenses from categories with NO budget
-            var categoriesWithBudget = budgets.Select(b => b.CategoryId).ToHashSet();
-            var expensesWithoutBudget = allMonthExpenses
-                .Where(e => !categoriesWithBudget.Contains(e.CategoryId))
-                .Sum(e => e.Amount);
-            overBudget += expensesWithoutBudget;
-
-            var categoryTotals = allMonthExpenses
-                .GroupBy(e => e.CategoryName)
-                .Select(g => new
-                {
-                    Category = g.Key,
-                    Total = g.Sum(e => e.Amount)
-                })
-                .OrderByDescending(x => x.Total)
-                .ToList();
 
             using var stream = new MemoryStream();
-            var document = new Document(PageSize.A4, 40, 40, 40, 40);
+            var document = new Document(PageSize.A4, 30, 30, 40, 40); // Tighter margins
             PdfWriter.GetInstance(document, stream);
             document.Open();
 
-            var titleFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 24, new BaseColor(88, 54, 71));
-            var headerFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 16, BaseColor.DARK_GRAY);
-            var subHeaderFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 12, BaseColor.BLACK);
-            var normalFont = FontFactory.GetFont(FontFactory.HELVETICA, 10, BaseColor.BLACK);
-            var smallFont = FontFactory.GetFont(FontFactory.HELVETICA, 8, BaseColor.GRAY);
+            // COLORS
+            var primaryColor = new BaseColor(30, 41, 59); // Slate 800
+            var accentColor = new BaseColor(59, 130, 246); // Blue 500
+            var lightGray = new BaseColor(248, 250, 252); // Slate 50
+            var darkGray = new BaseColor(51, 65, 85); // Slate 700
 
-            // Header
-            var headerTable = new PdfPTable(1) { WidthPercentage = 100 };
-            var titleCell = new PdfPCell(new Phrase("FINANCE\nTRACKER", titleFont))
-            {
-                Border = Rectangle.NO_BORDER,
-                HorizontalAlignment = Element.ALIGN_CENTER,
-                VerticalAlignment = Element.ALIGN_MIDDLE,
-                PaddingBottom = 20
-            };
+            // FONTS
+            var titleFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 22, primaryColor);
+            var subtitleFont = FontFactory.GetFont(FontFactory.HELVETICA, 10, BaseColor.GRAY);
+            var headerFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10, BaseColor.WHITE);
+            var normalFont = FontFactory.GetFont(FontFactory.HELVETICA, 9, darkGray);
+            var boldFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 9, darkGray);
+            var cardLabelFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 9, new BaseColor(100, 116, 139)); // Slate 500
+            var cardValueFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 16, primaryColor);
+
+            // --- HEADER SECTION ---
+            var headerTable = new PdfPTable(2) { WidthPercentage = 100 };
+            headerTable.SetWidths(new float[] { 2, 1 });
+
+            // Title Pair
+            var titleCell = new PdfPCell { Border = Rectangle.NO_BORDER, VerticalAlignment = Element.ALIGN_MIDDLE };
+            titleCell.AddElement(new Paragraph("FINANCE TRACKER", titleFont));
+            titleCell.AddElement(new Paragraph($"Export Period: {startDate:MMM dd, yyyy} - {endDate:MMM dd, yyyy}", subtitleFont));
             headerTable.AddCell(titleCell);
+
+            // Logo/Branding (Text for now)
+            var brandingCell = new PdfPCell(new Paragraph("REPORT", 
+                FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 24, new BaseColor(241, 245, 249)))) 
+                { Border = Rectangle.NO_BORDER, HorizontalAlignment = Element.ALIGN_RIGHT, VerticalAlignment = Element.ALIGN_MIDDLE };
+            headerTable.AddCell(brandingCell);
+            
             document.Add(headerTable);
+            document.Add(new Paragraph(" ") { SpacingAfter = 10 });
 
-            // Summary Cards
-            var summaryTable = new PdfPTable(4) { WidthPercentage = 100, SpacingAfter = 20 };
+            // --- SUMMARY CARDS SECTION ---
+            var summaryTable = new PdfPTable(4) { WidthPercentage = 100, SpacingAfter = 25 };
             summaryTable.SetWidths(new float[] { 1, 1, 1, 1 });
+            summaryTable.DefaultCell.Border = Rectangle.NO_BORDER;
+            summaryTable.DefaultCell.Padding = 5;
 
-            // Budget Box
-            var budgetBox = new PdfPTable(1) { WidthPercentage = 100 };
-            var budgetHeaderCell = new PdfPCell(new Phrase("BUDGET", subHeaderFont))
+            // Helper to create cards
+            PdfPCell CreateCard(string label, string value, BaseColor stripeColor)
             {
-                BackgroundColor = new BaseColor(173, 216, 230),
-                Padding = 8,
-                HorizontalAlignment = Element.ALIGN_CENTER,
-                Border = Rectangle.NO_BORDER
-            };
-            budgetBox.AddCell(budgetHeaderCell);
+                var card = new PdfPTable(1) { WidthPercentage = 100 };
+                var cell = new PdfPCell { Border = Rectangle.NO_BORDER, BackgroundColor = new BaseColor(255, 255, 255), Padding = 15 };
+                
+                // Top Border Stripe
+                var stripe = new PdfPCell { FixedHeight = 3, BackgroundColor = stripeColor, Border = Rectangle.NO_BORDER };
+                card.AddCell(stripe);
 
-            var budgetAmountCell = new PdfPCell(new Phrase($"₱{totalBudget:N2}",
-                FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 16, BaseColor.BLACK)))
-            {
-                BackgroundColor = new BaseColor(255, 255, 255),
-                Padding = 15,
-                HorizontalAlignment = Element.ALIGN_CENTER,
-                Border = Rectangle.BOX
-            };
-            budgetBox.AddCell(budgetAmountCell);
-            summaryTable.AddCell(new PdfPCell(budgetBox) { Border = Rectangle.NO_BORDER, Padding = 5 });
+                cell.AddElement(new Paragraph(label, cardLabelFont));
+                cell.AddElement(new Paragraph(value, cardValueFont));
+                card.AddCell(cell);
+                
+                // Wrapper cell
+                var wrapper = new PdfPCell(card) { Border = Rectangle.NO_BORDER, Padding = 4 };
+                return wrapper;
+            }
 
-            // Expense Box
-            var expenseBox = new PdfPTable(1) { WidthPercentage = 100 };
-            var expenseHeaderCell = new PdfPCell(new Phrase("EXPENSE", subHeaderFont))
-            {
-                BackgroundColor = new BaseColor(255, 182, 193),
-                Padding = 8,
-                HorizontalAlignment = Element.ALIGN_CENTER,
-                Border = Rectangle.NO_BORDER
-            };
-            expenseBox.AddCell(expenseHeaderCell);
-
-            var expenseAmountCell = new PdfPCell(new Phrase($"₱{totalExpenses:N2}",
-                FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 16, BaseColor.BLACK)))
-            {
-                BackgroundColor = new BaseColor(255, 255, 255),
-                Padding = 15,
-                HorizontalAlignment = Element.ALIGN_CENTER,
-                Border = Rectangle.BOX
-            };
-            expenseBox.AddCell(expenseAmountCell);
-            summaryTable.AddCell(new PdfPCell(expenseBox) { Border = Rectangle.NO_BORDER, Padding = 5 });
-
-            // Total Amount Left Box
-            var leftBox = new PdfPTable(1) { WidthPercentage = 100 };
-            var leftHeaderCell = new PdfPCell(new Phrase("AMOUNT LEFT", subHeaderFont))
-            {
-                BackgroundColor = new BaseColor(144, 238, 144),
-                Padding = 8,
-                HorizontalAlignment = Element.ALIGN_CENTER,
-                Border = Rectangle.NO_BORDER
-            };
-            leftBox.AddCell(leftHeaderCell);
-
-            var leftAmountCell = new PdfPCell(new Phrase($"₱{remaining:N2}",
-                FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 16, remaining >= 0 ? new BaseColor(0, 128, 0) : new BaseColor(255, 0, 0))))
-            {
-                BackgroundColor = new BaseColor(255, 255, 255),
-                Padding = 15,
-                HorizontalAlignment = Element.ALIGN_CENTER,
-                Border = Rectangle.BOX
-            };
-            leftBox.AddCell(leftAmountCell);
-            summaryTable.AddCell(new PdfPCell(leftBox) { Border = Rectangle.NO_BORDER, Padding = 5 });
-
-            // Over Budget Box
-            var overBox = new PdfPTable(1) { WidthPercentage = 100 };
-            var overHeaderCell = new PdfPCell(new Phrase("OVER BUDGET", subHeaderFont))
-            {
-                BackgroundColor = new BaseColor(255, 160, 122),
-                Padding = 8,
-                HorizontalAlignment = Element.ALIGN_CENTER,
-                Border = Rectangle.NO_BORDER
-            };
-            overBox.AddCell(overHeaderCell);
-
-            var overAmountCell = new PdfPCell(new Phrase($"₱{overBudget:N2}",
-                FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 16, overBudget > 0 ? new BaseColor(255, 0, 0) : BaseColor.BLACK)))
-            {
-                BackgroundColor = new BaseColor(255, 255, 255),
-                Padding = 15,
-                HorizontalAlignment = Element.ALIGN_CENTER,
-                Border = Rectangle.BOX
-            };
-            overBox.AddCell(overAmountCell);
-            summaryTable.AddCell(new PdfPCell(overBox) { Border = Rectangle.NO_BORDER, Padding = 5 });
+            summaryTable.AddCell(CreateCard("TOTAL BUDGET", $"₱{totalBudget:N2}", accentColor));
+            summaryTable.AddCell(CreateCard("TOTAL EXPENSE", $"₱{totalExpenses:N2}", new BaseColor(239, 68, 68))); // Red 500
+            summaryTable.AddCell(CreateCard("REMAINING", $"₱{remaining:N2}", remaining >= 0 ? new BaseColor(34, 197, 94) : new BaseColor(239, 68, 68))); // Green or Red
+            summaryTable.AddCell(CreateCard("OVER BUDGET", $"₱{overBudget:N2}", new BaseColor(245, 158, 11))); // Amber 500
 
             document.Add(summaryTable);
 
-            // Transaction Table
-            document.Add(new Paragraph("TRANSACTION HISTORY", headerFont) { SpacingBefore = 10, SpacingAfter = 10 });
 
-            var table = new PdfPTable(6) { WidthPercentage = 100 };
-            table.SetWidths(new float[] { 0.8f, 1.5f, 2.5f, 1.8f, 1.2f, 1f });
+            // --- TRANSACTIONS TABLE SECTION ---
+            document.Add(new Paragraph("TRANSACTION HISTORY", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 12, primaryColor)) { SpacingAfter = 10 });
 
-            var headers = new[] { "No.", "Date", "Description", "Category", "Amount ₱", "Type" };
-            foreach (var header in headers)
+            var table = new PdfPTable(5) { WidthPercentage = 100 };
+            table.SetWidths(new float[] { 1.2f, 2.5f, 1.5f, 1.2f, 1f }); // Adjusted widths
+            
+            // Table Header Config
+            var headerStyle = new PdfPCell
             {
-                table.AddCell(new PdfPCell(new Phrase(header, subHeaderFont))
-                {
-                    BackgroundColor = new BaseColor(240, 240, 240),
-                    Padding = 8,
-                    HorizontalAlignment = Element.ALIGN_CENTER
-                });
+                BackgroundColor = primaryColor,
+                PaddingTop = 8,
+                PaddingBottom = 8,
+                PaddingLeft = 10,
+                PaddingRight = 10,
+                Border = Rectangle.NO_BORDER
+            };
+
+            void AddHeader(string text, int align = Element.ALIGN_LEFT)
+            {
+                var cell = new PdfPCell(headerStyle) { HorizontalAlignment = align };
+                cell.Phrase = new Phrase(text, headerFont);
+                table.AddCell(cell);
             }
 
-            // Create lookup for which categories have budgets
-            var categoriesWithBudgetLookup = budgets.Select(b => b.CategoryId).ToHashSet();
+            AddHeader("DATE");
+            AddHeader("DESCRIPTION");
+            AddHeader("CATEGORY");
+            AddHeader("AMOUNT", Element.ALIGN_RIGHT);
+            AddHeader("TYPE", Element.ALIGN_CENTER);
 
-            int counter = 1;
-            foreach (var expense in expensesForTable.OrderBy(e => e.ExpenseDate))
+            // Table Rows
+            int rowIndex = 0;
+            foreach (var expense in expensesForRange.OrderBy(e => e.ExpenseDate))
             {
                 var phDate = TimeZoneInfo.ConvertTime(expense.ExpenseDate, phTimeZone);
+                var isOdd = rowIndex % 2 != 0;
+                var rowColor = isOdd ? lightGray : BaseColor.WHITE;
 
-                table.AddCell(new PdfPCell(new Phrase(counter.ToString(), normalFont)) { Padding = 5, HorizontalAlignment = Element.ALIGN_CENTER });
-                table.AddCell(new PdfPCell(new Phrase(phDate.ToString("MMM d, yyyy"), normalFont)) { Padding = 5 });
-                table.AddCell(new PdfPCell(new Phrase(expense.Description ?? "-", normalFont)) { Padding = 5 });
-
-                var categoryCell = new PdfPCell(new Phrase(expense.DisplayCategoryName, normalFont))
+                var rowStyle = new PdfPCell
                 {
-                    Padding = 5,
-                    BackgroundColor = GetCategoryColor(expense.CategoryName)
+                    BackgroundColor = rowColor,
+                    PaddingTop = 7,
+                    PaddingBottom = 7,
+                    PaddingLeft = 10,
+                    PaddingRight = 10,
+                    Border = Rectangle.NO_BORDER,
+                    VerticalAlignment = Element.ALIGN_MIDDLE
                 };
-                table.AddCell(categoryCell);
 
-                table.AddCell(new PdfPCell(new Phrase($"₱{expense.Amount:N2}", normalFont))
-                { Padding = 5, HorizontalAlignment = Element.ALIGN_RIGHT });
-
-                // Check if this expense's category has a budget
-                bool hasNoBudget = !categoriesWithBudgetLookup.Contains(expense.CategoryId);
-                var typeText = hasNoBudget ? "Unplanned" : "";
-
-                var typeCell = new PdfPCell(new Phrase(typeText, normalFont))
+                void AddCell(string text, Font font, int align = Element.ALIGN_LEFT)
                 {
-                    Padding = 5,
-                    HorizontalAlignment = Element.ALIGN_CENTER,
-                    BackgroundColor = hasNoBudget ? new BaseColor(255, 235, 205) : BaseColor.WHITE
-                };
+                    var cell = new PdfPCell(rowStyle) { HorizontalAlignment = align };
+                    cell.Phrase = new Phrase(text, font);
+                    table.AddCell(cell);
+                }
+
+                AddCell(phDate.ToString("MMM dd, yyyy"), normalFont);
+                AddCell(expense.Description ?? "-", normalFont);
+                AddCell(expense.DisplayCategoryName, boldFont);
+                AddCell($"₱{expense.Amount:N2}", boldFont, Element.ALIGN_RIGHT);
+
+                // Type (Unplanned/Planned) logic
+                bool hasNoBudget = !categoryBudgetSums.ContainsKey(expense.CategoryId);
+                string typeText = hasNoBudget ? "UNPLANNED" : "PLANNED";
+                
+                // Custom pill for Type
+                var typeCell = new PdfPCell(rowStyle) { HorizontalAlignment = Element.ALIGN_CENTER };
+                var chunk = new Chunk(typeText, FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 7, hasNoBudget ? BaseColor.WHITE : darkGray));
+                chunk.SetBackground(hasNoBudget ? new BaseColor(239, 68, 68) : new BaseColor(226, 232, 240)); // Red or Slate 200
+                // Note: Chunk background is limited. For proper badges we need simpler text.
+                // Let's stick to text color for simplicity and cleanliness.
+                var statusFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 7, hasNoBudget ? new BaseColor(220, 38, 38) : new BaseColor(71, 85, 105));
+                typeCell.Phrase = new Phrase(typeText, statusFont);
                 table.AddCell(typeCell);
 
-                counter++;
+                rowIndex++;
             }
 
             document.Add(table);
 
             // Footer
-            document.Add(new Paragraph(" "));
-            document.Add(new Paragraph($"Generated on: {now:MMMM dd, yyyy hh:mm tt}", smallFont) { Alignment = Element.ALIGN_RIGHT });
-            document.Add(new Paragraph($"Period: {startDate:MMM dd, yyyy} - {endDate:MMM dd, yyyy}", smallFont) { Alignment = Element.ALIGN_RIGHT });
+            // Note: Canvas manipulation is complex in this context. 
+            // Simplified Footer
+            document.Add(new Paragraph(" ") { SpacingBefore = 20 });
+            var footerLine = new Paragraph($"Generated on {now:MMMM dd, yyyy} at {now:hh:mm tt}", subtitleFont) 
+            { Alignment = Element.ALIGN_CENTER };
+            document.Add(footerLine);
 
             document.Close();
 
             var username = HttpContext.Session.GetString("Username") ?? "User";
-            return File(stream.ToArray(), "application/pdf", $"FinanceReport_{username}_{now:yyyyMMdd}.pdf");
+            return File(stream.ToArray(), "application/pdf", $"FinanceReport_{username}_{startDate:yyyyMMdd}-{endDate:yyyyMMdd}.pdf");
         }
 
         private BaseColor GetCategoryColor(string categoryName)
