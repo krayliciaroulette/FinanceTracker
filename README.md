@@ -85,11 +85,3 @@ Built with an industry-standard stack focused on performance and maintainability
 | **Database** | **MongoDB** | NoSQL document database for flexible schema design. |
 | **Styling** | **Tailwind CSS** | Utility-first CSS framework for rapid UI development (CDN-based). |
 | **Reporting** | **QuestPDF & ClosedXML** | Libraries for generating professional PDF and Excel reports. |
-
----
-
-## 📸 Interface
-
-<div align="center">
-  <img src="https://via.placeholder.com/800x450/1e293b/38bdf8?text=Dashboard+View" alt="Dashboard" style="border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
-</div>
