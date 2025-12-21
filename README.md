@@ -59,9 +59,9 @@ Follow these instructions to get the project up and running on your local machin
 
 3. **Run the Application**
    ```bash
-   dotnet run
+   dotnet watch run
    ```
-   The application will launch typically at `http://localhost:5000` or the port configured in your environment.
+   The application will launch typically at `http://127.0.0.1:10000/` or the port configured in your environment.
 
 ### 🐳 Running with Docker
 
