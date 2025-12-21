@@ -10,6 +10,10 @@
 
 FinanceTracker combines the raw performance of **.NET 8** with the flexibility of **MongoDB** to deliver a seamless, server-rendered financial management experience. Styled with **Tailwind CSS** for a premium, dark-mode-first aesthetic, it captures the speed of a modern web app with the reliability of enterprise-grade backend architecture.
 
+<div align="center">
+  <h1>👉 <a href="https://financetracker-9m33.onrender.com/">CLICK HERE TO ACCESS THE SITE</a> 👈</h1>
+</div>
+
 ## ✨ Features
 
 ### 💵 Core Financial Tracking
